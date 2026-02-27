@@ -55,8 +55,10 @@ while (( elapsed < MAX_WAIT )); do
 
   # Preferred completion path: detect explicit marker with exit code
   if [[ -n "$TASK_TOKEN" ]]; then
-    marker_line="$(tmux capture-pane -t "$PANE_TARGET" -p -S -120 2>/dev/null | grep "__AGENT_STACK_DONE__:${TASK_TOKEN}:" | tail -n 1 || true)"
+    marker_line="$(tmux capture-pane -t "$PANE_TARGET" -p -S -120 2>/dev/null       | grep "__AGENT_STACK_DONE__:${TASK_TOKEN}:"       | grep -v 'echo "__AGENT_STACK_DONE__'       | tail -n 1 || true)"
     if [[ -n "$marker_line" ]]; then
+      # strip possible surrounding quotes/spaces
+      marker_line="$(printf '%s' "$marker_line" | sed 's/^"//; s/"$//')"
       exit_code="${marker_line##*:}"
       if [[ "$exit_code" == "0" ]]; then
         send_webhook "✅" "完成 (${elapsed}s)" "$TASK_DESC"
