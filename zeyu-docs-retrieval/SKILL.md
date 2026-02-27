@@ -9,6 +9,14 @@
 
 ---
 
+## 治理规范适配（v2.2）
+
+当用于任务编排时，遵循以下最小治理约束：
+- 入站自动化只写 `08-RAW-CONTEXT/00-PENDING`，不直接创建 ACTIVE 任务。
+- Pending 必须人工确认后再晋升到 `03-ACTIVE-TASKS`。
+- Pending 超过 24h 未确认，执行 TTL 归档到废弃区。
+- 任务发布时应维护 `00-CURRENT.md` 唯一入口，并输出 final 的 Before→After 一句话 diff 摘要。
+
 ## 快速开始（2 分钟）
 
 ### 前置条件

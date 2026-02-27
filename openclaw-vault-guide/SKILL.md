@@ -195,13 +195,15 @@ ZeYu AI Brain 是你的"大脑"——存储所有业务上下文、项目信息�
 - 任务原文入库（强制）→ `08-RAW-CONTEXT/YYYY/YYYY-MM/TASK-*.md`
 - 任务变更（结构化）→ `03-ACTIVE-TASKS/进行中任务.md` + `.clawdbot/active-tasks.json`
 - **任务文件夹（强制）** → `03-ACTIVE-TASKS/TASK-xxxx/`（每个任务独立目录）
-  - `README.md`（任务入口）
+  - `00-CURRENT.md`（唯一生效入口）
   - `00-任务简报.md`（状态/目标/结论）
   - `01-需求原文与约束.md`（需求与约束）
-  - `02-调研证据/`（来源材料）
-  - `03-方案与演进/`（方案迭代）
-  - `04-回执与里程碑.md`（started/in-progress/review/done）
+  - `02-WORKING/`（中间产物：脚本/批次/样本）
+  - `03-PUBLISHED/`（发布版本：Final）
+  - `04-回执与里程碑.md`（pending/started/in-progress/review/done）
   - `05-风险与决策记录.md`（风险、决策、回滚）
+  - `99-ARCHIVE/`（历史归档）
+- 模板统一使用：`templates/任务模板-v2-多Agent收敛版.md`
 - 决策记录 → `01-CONTEXT/决策/决策日志.md`
 - 成功模式 → `01-CONTEXT/成功模式/可复用模式.md`
 - 失败案例 → `01-CONTEXT/失败案例/{任务名}.md`
