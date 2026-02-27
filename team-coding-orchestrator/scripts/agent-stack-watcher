@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# agent-stack-watcher: poll tmux pane until agent finishes, then fire Discord webhook
+# Usage: agent-stack-watcher <bot_id> <agent> <pane_target> <task_desc>
+# Designed to run detached via nohup
+
+set -uo pipefail
+
+BOT_ID="${1:?bot_id required}"
+AGENT="${2:?agent required}"
+PANE_TARGET="${3:?pane_target required}"
+TASK_DESC="${4:-task}"
+
+SESSION_NAME="agent-stack"
+WINDOW_NAME="orchestrator"
+ENV_FILE="${AGENT_STACK_ENV:-$HOME/.config/agent-stack/env.sh}"
+POLL_INTERVAL=10
+MAX_WAIT=7200
+
+# Load env for webhook URL
+if [[ -f "$ENV_FILE" ]]; then
+  source "$ENV_FILE"
+fi
+
+if [[ -z "${DISCORD_WEBHOOK_URL:-}" ]]; then
+  echo "DISCORD_WEBHOOK_URL not set, exiting"
+  exit 1
+fi
+
+send_webhook() {
+  local emoji="$1" status_text="$2" detail="$3"
+  local message="${emoji} ${AGENT} ${status_text}: ${detail} <@${BOT_ID}>"
+  curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"content\":$(printf '%s' "$message" | jq -Rs .)}" \
+    >/dev/null 2>&1
+  echo "[notify] sent: $message"
+}
+
+# Wait for process to start
+sleep 5
+
+elapsed=0
+while (( elapsed < MAX_WAIT )); do
+  # Check session exists
+  if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
+    echo "tmux session gone, exiting"
+    exit 1
+  fi
+
+  # Get current command in the pane
+  cur_cmd="$(tmux list-panes -t "${SESSION_NAME}:${WINDOW_NAME}" \
+    -F '#{pane_id}|#{pane_current_command}' 2>/dev/null \
+    | grep "^${PANE_TARGET}|" | cut -d'|' -f2)"
+
+  # "bash" means agent process exited — task done
+  if [[ "$cur_cmd" == "bash" ]]; then
+    send_webhook "✅" "完成 (${elapsed}s)" "$TASK_DESC"
+    exit 0
+  fi
+
+  sleep "$POLL_INTERVAL"
+  (( elapsed += POLL_INTERVAL ))
+done
+
+# Timeout
+send_webhook "⏰" "超时 (>${MAX_WAIT}s)" "$TASK_DESC"
+exit 1

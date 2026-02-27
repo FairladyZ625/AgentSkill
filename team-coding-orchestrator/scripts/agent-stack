@@ -1,0 +1,439 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SESSION_NAME="agent-stack"
+WINDOW_NAME="orchestrator"
+ENV_FILE="${AGENT_STACK_ENV:-$HOME/.config/agent-stack/env.sh}"
+
+load_env() {
+  if [[ -f "$ENV_FILE" ]]; then
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+  fi
+
+  : "${CLAUDE_MODEL:=claude-sonnet-4-6}"
+  : "${CLAUDE_BASE_URL:=https://gaccode.com/claudecode}"
+  : "${DISCORD_WEBHOOK_URL:=}"
+}
+
+ensure_tmux() {
+  command -v tmux >/dev/null 2>&1 || {
+    echo "tmux not found" >&2
+    exit 1
+  }
+}
+
+session_exists() {
+  tmux has-session -t "$SESSION_NAME" 2>/dev/null
+}
+
+pane_target() {
+  local agent="$1"
+  local pane_id
+
+  case "$agent" in
+    codex|claude|gemini) ;;
+    *)
+      echo "unknown agent: $agent (use codex|claude|gemini)" >&2
+      exit 1
+      ;;
+  esac
+
+  pane_id="$(tmux list-panes -t "$SESSION_NAME:$WINDOW_NAME" -F '#{pane_id}|#{pane_title}' 2>/dev/null | awk -F '|' -v a="$agent" '$2==a {print $1; exit}')"
+  if [[ -z "$pane_id" ]]; then
+    echo "pane not found for agent=$agent (is session up?)" >&2
+    exit 1
+  fi
+
+  echo "$pane_id"
+}
+
+cmd_for_agent() {
+  local agent="$1"
+  local prompt="$2"
+
+  case "$agent" in
+    codex)
+      printf 'codex exec %q' "$prompt"
+      ;;
+    claude)
+      load_env
+      if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+        printf 'ANTHROPIC_BASE_URL=%q ANTHROPIC_API_KEY=%q claude --dangerously-skip-permissions -p --model %q %q' \
+          "$CLAUDE_BASE_URL" "$ANTHROPIC_API_KEY" "$CLAUDE_MODEL" "$prompt"
+      else
+        printf 'claude --dangerously-skip-permissions -p --model %q %q' "$CLAUDE_MODEL" "$prompt"
+      fi
+      ;;
+    gemini)
+      # intentionally login-based, no API key usage here
+      printf 'gemini -p %q' "$prompt"
+      ;;
+    *)
+      echo "unknown agent: $agent" >&2
+      exit 1
+      ;;
+  esac
+}
+
+notify_target() {
+  local bot_id="$1"
+  local agent="$2"
+  local exit_code="$3"
+  local task_desc="${4:-任务}"
+
+  if [[ -z "$DISCORD_WEBHOOK_URL" ]]; then
+    echo "[notify] DISCORD_WEBHOOK_URL not set, skipping notification" >&2
+    return 0
+  fi
+
+  local emoji="✅"
+  local status_text="完成"
+  if [[ "$exit_code" != "0" ]]; then
+    emoji="❌"
+    status_text="失败"
+  fi
+
+  local message="${emoji} ${agent} ${status_text} (exit_code=${exit_code}): ${task_desc} <@${bot_id}>"
+
+  curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"content\":\"$message\"}" >/dev/null 2>&1
+
+  echo "[notify] sent to <@$bot_id>"
+}
+
+up() {
+  ensure_tmux
+  if session_exists; then
+    echo "session already exists: $SESSION_NAME"
+    return 0
+  fi
+
+  tmux new-session -d -s "$SESSION_NAME" -n "$WINDOW_NAME" "bash"
+  tmux split-window -h -t "$SESSION_NAME:$WINDOW_NAME" "bash"
+  tmux split-window -v -t "$SESSION_NAME:$WINDOW_NAME" "bash"
+
+  tmux select-layout -t "$SESSION_NAME:$WINDOW_NAME" tiled >/dev/null
+
+  local panes=()
+  while IFS= read -r pane; do
+    panes+=("$pane")
+  done < <(tmux list-panes -t "$SESSION_NAME:$WINDOW_NAME" -F '#{pane_id}')
+
+  if [[ "${#panes[@]}" -lt 3 ]]; then
+    echo "failed to create 3 panes" >&2
+    exit 1
+  fi
+
+  tmux select-pane -t "${panes[0]}" -T "codex"
+  tmux select-pane -t "${panes[1]}" -T "claude"
+  tmux select-pane -t "${panes[2]}" -T "gemini"
+
+  tmux send-keys -t "${panes[0]}" "echo '[codex pane ready]'" Enter
+  tmux send-keys -t "${panes[1]}" "echo '[claude pane ready]'" Enter
+  tmux send-keys -t "${panes[2]}" "echo '[gemini pane ready]'" Enter
+
+  echo "started tmux session: $SESSION_NAME"
+}
+
+down() {
+  ensure_tmux
+  if session_exists; then
+    tmux kill-session -t "$SESSION_NAME"
+    echo "stopped: $SESSION_NAME"
+  else
+    echo "session not found: $SESSION_NAME"
+  fi
+}
+
+attach() {
+  ensure_tmux
+  tmux attach -t "$SESSION_NAME"
+}
+
+status() {
+  ensure_tmux
+  if ! session_exists; then
+    echo "session not running"
+    exit 1
+  fi
+
+  tmux list-panes -t "$SESSION_NAME:$WINDOW_NAME" -F '#{pane_index}\t#{pane_title}\t#{pane_current_command}\t#{pane_active}'
+}
+
+send_cmd() {
+  ensure_tmux
+  local agent="$1"
+  shift
+  local raw_cmd="$*"
+  local target
+  target="$(pane_target "$agent")"
+
+  tmux send-keys -t "$target" -l -- "$raw_cmd"
+  tmux send-keys -t "$target" Enter
+
+  echo "sent to $agent"
+}
+
+task() {
+  ensure_tmux
+  load_env
+
+  local notify_bot_id=""
+  local agent=""
+  local prompt=""
+
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --notify)
+        if [[ -z "${2:-}" ]]; then
+          echo "error: --notify requires bot_id argument" >&2
+          exit 1
+        fi
+        notify_bot_id="$2"
+        shift 2
+        ;;
+      codex|claude|gemini)
+        agent="$1"
+        shift
+        prompt="$*"
+        break
+        ;;
+      *)
+        echo "error: unknown option '$1'" >&2
+        exit 1
+        ;;
+    esac
+  done
+
+  if [[ -z "$agent" ]]; then
+    echo "usage: $0 task [--notify <bot_id>] <codex|claude|gemini> \"prompt\"" >&2
+    exit 1
+  fi
+
+  if [[ -z "$prompt" ]]; then
+    echo "usage: $0 task [--notify <bot_id>] <codex|claude|gemini> \"prompt\"" >&2
+    exit 1
+  fi
+
+  local target cmd
+  target="$(pane_target "$agent")"
+  cmd="$(cmd_for_agent "$agent" "$prompt")"
+
+  # Send task to agent
+  tmux send-keys -t "$target" -l -- "$cmd"
+  tmux send-keys -t "$target" Enter
+
+  echo "task sent to $agent"
+
+  # If --notify is specified, spawn a background watcher that polls pane state
+  # and fires webhook when the agent finishes (pane_current_command returns to "bash")
+  if [[ -n "$notify_bot_id" ]]; then
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    echo "[notify] notification scheduled for <@$notify_bot_id> (watching $agent pane)"
+    nohup "$script_dir/agent-stack-watcher" "$notify_bot_id" "$agent" "$target" "${prompt:0:80}" \
+      >/tmp/agent-stack-watch-${agent}.log 2>&1 &
+    disown
+  fi
+}
+
+# Background watcher: polls tmux pane until agent process exits, then sends webhook
+# NOTE: runs with relaxed error handling since it's a background process
+_watch_and_notify() {
+  set +euo pipefail  # relax for background polling
+  local bot_id="$1"
+  local agent="$2"
+  local target="$3"
+  local task_desc="$4"
+  local poll_interval=10
+  local max_wait=7200  # 2 hours max
+  local elapsed=0
+
+  # Wait a few seconds for the process to actually start
+  sleep 5
+
+  while (( elapsed < max_wait )); do
+    # Check if pane still exists
+    if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
+      return 1
+    fi
+
+    # Get current command running in the pane
+    local cur_cmd=""
+    cur_cmd="$(tmux list-panes -t "$SESSION_NAME:$WINDOW_NAME" \
+      -F '#{pane_id}|#{pane_current_command}' 2>/dev/null \
+      | grep "^${target}|" | cut -d'|' -f2 || true)"
+
+    # When the pane returns to "bash", the agent task has finished
+    if [[ "$cur_cmd" == "bash" ]]; then
+      load_env
+      notify_target "$bot_id" "$agent" "0" "任务完成 (${elapsed}s): ${task_desc}"
+      return 0
+    fi
+
+    sleep "$poll_interval"
+    (( elapsed += poll_interval )) || true
+  done
+
+  # Timed out
+  load_env
+  notify_target "$bot_id" "$agent" "1" "任务超时 (>${max_wait}s): ${task_desc}"
+}
+
+watch_agent() {
+  ensure_tmux
+  load_env
+  local notify_bot_id="$1"
+  local agent="$2"
+  local target
+  target="$(pane_target "$agent")"
+
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+  echo "watching $agent pane for completion (will notify <@$notify_bot_id>)..."
+  nohup "$script_dir/agent-stack-watcher" "$notify_bot_id" "$agent" "$target" "手动 watch" \
+    >/tmp/agent-stack-watch-${agent}.log 2>&1 &
+  local watcher_pid=$!
+  echo "watcher PID: $watcher_pid (background, log: /tmp/agent-stack-watch-${agent}.log)"
+}
+
+tail_pane() {
+  ensure_tmux
+  local agent="$1"
+  local lines="${2:-60}"
+  local target
+  target="$(pane_target "$agent")"
+  tmux capture-pane -t "$target" -p | tail -n "$lines"
+}
+
+doctor() {
+  load_env
+
+  echo "== binaries =="
+  for b in codex claude gemini tmux; do
+    if command -v "$b" >/dev/null 2>&1; then
+      local ver=""
+      if [[ "$b" == "tmux" ]]; then
+        ver="$(tmux -V 2>/dev/null | head -n 1)"
+      else
+        ver="$($b --version 2>/dev/null | head -n 1)"
+      fi
+      echo "[ok] $b: $ver"
+    else
+      echo "[missing] $b"
+    fi
+  done
+
+  echo
+  echo "== config =="
+  if [[ -n "${DISCORD_WEBHOOK_URL:-}" ]]; then
+    echo "[ok] DISCORD_WEBHOOK_URL: configured"
+  else
+    echo "[warn] DISCORD_WEBHOOK_URL: not set (notifications disabled)"
+  fi
+
+  echo
+  echo "== quick checks =="
+  if codex exec "Reply with exactly: CODEX_OK" >/tmp/agent_stack_codex_check.txt 2>&1; then
+    echo "[ok] codex prompt"
+  else
+    echo "[fail] codex prompt"
+    tail -n 5 /tmp/agent_stack_codex_check.txt || true
+  fi
+
+  if gemini -p "Reply with exactly: GEMINI_OK" >/tmp/agent_stack_gemini_check.txt 2>&1; then
+    echo "[ok] gemini prompt (login-based)"
+  else
+    echo "[fail] gemini prompt"
+    tail -n 5 /tmp/agent_stack_gemini_check.txt || true
+  fi
+
+  if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+    if ANTHROPIC_BASE_URL="$CLAUDE_BASE_URL" ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+      claude --dangerously-skip-permissions -p --model "$CLAUDE_MODEL" "Reply with exactly: CLAUDE_OK" \
+      >/tmp/agent_stack_claude_check.txt 2>&1; then
+      echo "[ok] claude prompt (model=$CLAUDE_MODEL, env-key)"
+    else
+      echo "[fail] claude prompt (model=$CLAUDE_MODEL, env-key)"
+      tail -n 8 /tmp/agent_stack_claude_check.txt || true
+    fi
+  else
+    if claude --dangerously-skip-permissions -p --model "$CLAUDE_MODEL" "Reply with exactly: CLAUDE_OK" \
+      >/tmp/agent_stack_claude_check.txt 2>&1; then
+      echo "[ok] claude prompt (model=$CLAUDE_MODEL, login/session)"
+    else
+      echo "[fail] claude prompt (model=$CLAUDE_MODEL, login/session)"
+      tail -n 8 /tmp/agent_stack_claude_check.txt || true
+    fi
+  fi
+}
+
+usage() {
+  cat <<'EOF'
+agent-stack - internal multi-CLI orchestration (Codex / Claude / Gemini)
+
+Usage:
+  agent-stack up
+  agent-stack down
+  agent-stack attach
+  agent-stack status
+  agent-stack send <codex|claude|gemini> <shell command>
+  agent-stack task [--notify <bot_id>] <codex|claude|gemini> "prompt"
+  agent-stack watch <bot_id> <codex|claude|gemini>
+  agent-stack watch <bot_id> <codex|claude|gemini>   (attach watcher to running task)
+  agent-stack tail <codex|claude|gemini> [lines]
+  agent-stack doctor
+
+Options:
+  --notify <bot_id>   Send Discord notification to specified bot when task completes
+                      Requires DISCORD_WEBHOOK_URL in env.sh
+
+Configuration:
+  - ENV file: ~/.config/agent-stack/env.sh (override with AGENT_STACK_ENV)
+  - Required for --notify: DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+
+Notes:
+  - Gemini is intentionally login-based (no API key in this tool)
+  - Claude supports GAC via ENV file if ANTHROPIC_API_KEY is set
+  - Notifications use Discord webhook to @mention target bot
+EOF
+}
+
+main() {
+  local cmd="${1:-}"
+  case "$cmd" in
+    up) up ;;
+    down) down ;;
+    attach) attach ;;
+    status) status ;;
+    send)
+      shift
+      send_cmd "${1:-}" "${@:2}"
+      ;;
+    task)
+      shift
+      task "$@"
+      ;;
+    watch)
+      shift
+      watch_agent "${1:-}" "${2:-}"
+      ;;
+    tail)
+      shift
+      tail_pane "${1:-}" "${2:-60}"
+      ;;
+    doctor) doctor ;;
+    ""|-h|--help|help) usage ;;
+    *)
+      echo "unknown command: $cmd" >&2
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"
