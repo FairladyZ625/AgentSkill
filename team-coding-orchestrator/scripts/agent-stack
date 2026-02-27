@@ -150,6 +150,8 @@ down() {
   ensure_tmux
   if session_exists; then
     tmux kill-session -t "$SESSION_NAME"
+    # cleanup detached watchers for this stack to avoid stale timeout notifications
+    pkill -f "team-coding-orchestrator/scripts/agent-stack-watcher" >/dev/null 2>&1 || true
     echo "stopped: $SESSION_NAME"
   else
     echo "session not found: $SESSION_NAME"
