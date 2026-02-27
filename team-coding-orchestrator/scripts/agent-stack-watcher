@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # agent-stack-watcher: poll tmux pane until agent finishes, then fire Discord webhook
-# Usage: agent-stack-watcher <bot_id> <agent> <pane_target> <task_desc>
+# Usage: agent-stack-watcher <bot_id> <agent> <pane_target> <task_desc> [task_token]
 # Designed to run detached via nohup
 
 set -uo pipefail
@@ -9,6 +9,7 @@ BOT_ID="${1:?bot_id required}"
 AGENT="${2:?agent required}"
 PANE_TARGET="${3:?pane_target required}"
 TASK_DESC="${4:-task}"
+TASK_TOKEN="${5:-}"
 
 SESSION_NAME="agent-stack"
 WINDOW_NAME="orchestrator"
@@ -52,7 +53,22 @@ while (( elapsed < MAX_WAIT )); do
     -F '#{pane_id}|#{pane_current_command}' 2>/dev/null \
     | grep "^${PANE_TARGET}|" | cut -d'|' -f2)"
 
-  # "bash" means agent process exited — task done
+  # Preferred completion path: detect explicit marker with exit code
+  if [[ -n "$TASK_TOKEN" ]]; then
+    marker_line="$(tmux capture-pane -t "$PANE_TARGET" -p -S -120 2>/dev/null | grep "__AGENT_STACK_DONE__:${TASK_TOKEN}:" | tail -n 1 || true)"
+    if [[ -n "$marker_line" ]]; then
+      exit_code="${marker_line##*:}"
+      if [[ "$exit_code" == "0" ]]; then
+        send_webhook "✅" "完成 (${elapsed}s)" "$TASK_DESC"
+        exit 0
+      else
+        send_webhook "❌" "失败 (${elapsed}s, exit=${exit_code})" "$TASK_DESC"
+        exit 1
+      fi
+    fi
+  fi
+
+  # Fallback: pane returns to bash
   if [[ "$cur_cmd" == "bash" ]]; then
     send_webhook "✅" "完成 (${elapsed}s)" "$TASK_DESC"
     exit 0

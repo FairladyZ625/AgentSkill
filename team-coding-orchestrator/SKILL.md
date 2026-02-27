@@ -53,6 +53,9 @@ The script supports:
 - `tail <agent> [lines]`
 - `doctor`
 
+Notification hooks now apply uniformly to **codex / claude / gemini**.
+When `--notify` is used, agent-stack injects a completion token and watcher reports success/failure back to Discord webhook.
+
 ## Standard operating flow
 
 1. Run `scripts/agent-stack up`
@@ -100,3 +103,14 @@ When coordinating work, provide concise updates:
 - next step
 
 Use templates and examples from `references/routing-playbook.md` when needed.
+
+
+## CodeX / Gemini hook examples
+
+```bash
+# Codex with completion callback
+scripts/agent-stack task --notify 1475340557059625222 codex "Implement ..."
+
+# Gemini with completion callback
+scripts/agent-stack task --notify 1475340557059625222 gemini "Summarize ..."
+```

@@ -51,29 +51,38 @@ pane_target() {
 cmd_for_agent() {
   local agent="$1"
   local prompt="$2"
+  local task_token="${3:-}"
 
+  local base_cmd=""
   case "$agent" in
     codex)
-      printf 'codex exec %q' "$prompt"
+      base_cmd=$(printf 'codex exec %q' "$prompt")
       ;;
     claude)
       load_env
       if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-        printf 'ANTHROPIC_BASE_URL=%q ANTHROPIC_API_KEY=%q claude --dangerously-skip-permissions -p --model %q %q' \
-          "$CLAUDE_BASE_URL" "$ANTHROPIC_API_KEY" "$CLAUDE_MODEL" "$prompt"
+        base_cmd=$(printf 'ANTHROPIC_BASE_URL=%q ANTHROPIC_API_KEY=%q claude --dangerously-skip-permissions -p --model %q %q' \
+          "$CLAUDE_BASE_URL" "$ANTHROPIC_API_KEY" "$CLAUDE_MODEL" "$prompt")
       else
-        printf 'claude --dangerously-skip-permissions -p --model %q %q' "$CLAUDE_MODEL" "$prompt"
+        base_cmd=$(printf 'claude --dangerously-skip-permissions -p --model %q %q' "$CLAUDE_MODEL" "$prompt")
       fi
       ;;
     gemini)
       # intentionally login-based, no API key usage here
-      printf 'gemini -p %q' "$prompt"
+      base_cmd=$(printf 'gemini -p %q' "$prompt")
       ;;
     *)
       echo "unknown agent: $agent" >&2
       exit 1
       ;;
   esac
+
+  # Emit deterministic completion marker for watcher (works for codex/claude/gemini)
+  if [[ -n "$task_token" ]]; then
+    printf '%s; __agent_stack_ec=$?; echo "__AGENT_STACK_DONE__:%s:${__agent_stack_ec}"' "$base_cmd" "$task_token"
+  else
+    printf '%s' "$base_cmd"
+  fi
 }
 
 notify_target() {
@@ -218,9 +227,10 @@ task() {
     exit 1
   fi
 
-  local target cmd
+  local target cmd task_token
   target="$(pane_target "$agent")"
-  cmd="$(cmd_for_agent "$agent" "$prompt")"
+  task_token="${agent}-$(date +%s)-$RANDOM"
+  cmd="$(cmd_for_agent "$agent" "$prompt" "$task_token")"
 
   # Send task to agent
   tmux send-keys -t "$target" -l -- "$cmd"
@@ -234,7 +244,7 @@ task() {
     local script_dir
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     echo "[notify] notification scheduled for <@$notify_bot_id> (watching $agent pane)"
-    nohup "$script_dir/agent-stack-watcher" "$notify_bot_id" "$agent" "$target" "${prompt:0:80}" \
+    nohup "$script_dir/agent-stack-watcher" "$notify_bot_id" "$agent" "$target" "${prompt:0:80}" "$task_token" \
       >/tmp/agent-stack-watch-${agent}.log 2>&1 &
     disown
   fi
@@ -295,7 +305,7 @@ watch_agent() {
   script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
   echo "watching $agent pane for completion (will notify <@$notify_bot_id>)..."
-  nohup "$script_dir/agent-stack-watcher" "$notify_bot_id" "$agent" "$target" "手动 watch" \
+  nohup "$script_dir/agent-stack-watcher" "$notify_bot_id" "$agent" "$target" "手动 watch" "" \
     >/tmp/agent-stack-watch-${agent}.log 2>&1 &
   local watcher_pid=$!
   echo "watcher PID: $watcher_pid (background, log: /tmp/agent-stack-watch-${agent}.log)"
