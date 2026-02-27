@@ -203,7 +203,7 @@ ZeYu AI Brain 是你的"大脑"——存储所有业务上下文、项目信息�
   - `04-回执与里程碑.md`（pending/started/in-progress/review/done）
   - `05-风险与决策记录.md`（风险、决策、回滚）
   - `99-ARCHIVE/`（历史归档）
-- 模板统一使用：`templates/任务模板-v2-多Agent收敛版.md`
+- 模板统一使用：`templates/任务模板.md`
 - 决策记录 → `01-CONTEXT/决策/决策日志.md`
 - 成功模式 → `01-CONTEXT/成功模式/可复用模式.md`
 - 失败案例 → `01-CONTEXT/失败案例/{任务名}.md`
