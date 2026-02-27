@@ -114,3 +114,26 @@ scripts/agent-stack task --notify 1475340557059625222 codex "Implement ..."
 # Gemini with completion callback
 scripts/agent-stack task --notify 1475340557059625222 gemini "Summarize ..."
 ```
+
+
+## Stable dispatch pattern (required for long prompts)
+
+When task context is large, **do not** send giant inline prompts directly to CLI.
+Use this two-step pattern:
+
+1. Write a context brief file into task workspace, e.g.
+   - `03-ACTIVE-TASKS/TASK-xxxx/02-WORKING/shared/cli-brief-<agent>.txt`
+2. Send a short command to CLI:
+   - `scripts/agent-stack task --notify <bot_id> claude "Read and execute instructions in <brief-file>. Return final receipt only."`
+
+Why:
+- avoids shell escaping/truncation issues in tmux
+- keeps prompts auditable/versioned in task folder
+- improves reproducibility across codex/claude/gemini
+
+Minimum brief contents:
+- objective + deliverable definition
+- mandatory input file paths
+- mandatory output file paths
+- hard constraints
+- receipt format (`commit hash + clean status + published paths`)
