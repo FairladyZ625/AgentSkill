@@ -137,3 +137,16 @@ Minimum brief contents:
 - mandatory output file paths
 - hard constraints
 - receipt format (`commit hash + clean status + published paths`)
+
+
+## Preflight for document-generation runs (new)
+
+Before dispatching long doc tasks, run a quick agent-specific preflight in pane:
+- verify target paths are readable
+- verify output directory writable
+- verify git repo available for commit
+
+Example short preflight prompt:
+`Check read access to <input paths>, write access to <output dir>, and git status in repo. Return only PASS/FAIL + reason.`
+
+If preflight fails, do not start long run. First fix context/path/permission issues.
