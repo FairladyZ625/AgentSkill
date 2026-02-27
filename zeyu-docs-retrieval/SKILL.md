@@ -1,3 +1,49 @@
+---
+name: zeyu-docs-retrieval
+version: "2.2"
+description: |
+  统一文档检索接口，为 OpenClaw Agent 编排系统提供三合一检索方案：
+  1) YAML Frontmatter 快速定位
+  2) 文档索引精确路径导航
+  3) Smart Connections 语义搜索
+tags:
+  - docs-retrieval
+  - openclaw
+  - obsidian
+  - yaml-frontmatter
+  - docs-index
+  - smart-connections
+  - semantic-search
+applies_to:
+  - OpenClaw Agent
+  - Codex Agent
+  - Claude Code Agent
+trigger_keywords:
+  - 文档检索
+  - 项目状态
+  - docs index
+  - YAML frontmatter
+  - Smart Connections
+  - 语义搜索
+  - 跨项目知识复用
+entrypoint: zdr
+runtime_priority:
+  - .venv
+  - /Users/lizeyu/miniforge/bin/python
+  - python3
+prerequisites:
+  - Obsidian REST API (localhost:27123)
+  - Smart Connections 已安装并完成索引
+  - Python 3.10+
+governance:
+  pending_write_path: 08-RAW-CONTEXT/00-PENDING
+  require_human_confirmation_before_active: true
+  pending_ttl_hours: 24
+  final_output_must_update_current: true
+maintainer: 泽宇
+updated: 2026-02-27
+---
+
 # zeyu-docs-retrieval Skill
 
 **统一文档检索接口 - 为 OpenClaw Agent 编排系统提供三合一检索方案**
