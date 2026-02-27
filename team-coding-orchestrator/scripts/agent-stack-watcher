@@ -55,7 +55,10 @@ while (( elapsed < MAX_WAIT )); do
 
   # Preferred completion path: detect explicit marker with numeric exit code
   if [[ -n "$TASK_TOKEN" ]]; then
-    marker_line="$(tmux capture-pane -t "$PANE_TARGET" -p -S -160 2>/dev/null       | grep "__AGENT_STACK_DONE__:${TASK_TOKEN}:"       | grep -E '__AGENT_STACK_DONE__:[^:]+:[0-9]+$'       | tail -n 1 || true)"
+    marker_line="$(tmux capture-pane -J -t "$PANE_TARGET" -p -S -160 2>/dev/null \
+      | grep "__AGENT_STACK_DONE__:${TASK_TOKEN}:" \
+      | grep -E '__AGENT_STACK_DONE__:[^:]+:[0-9]+$' \
+      | tail -n 1 || true)"
     if [[ -n "$marker_line" ]]; then
       exit_code="${marker_line##*:}"
       if [[ "$exit_code" == "0" ]]; then
