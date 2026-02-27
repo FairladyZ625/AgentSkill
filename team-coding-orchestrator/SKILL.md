@@ -38,10 +38,17 @@ Use bundled script:
 
 - `scripts/agent-stack`
 
+Recommended env (`~/.config/agent-stack/env.sh`):
+- `ANTHROPIC_API_KEY`
+- `CLAUDE_BASE_URL`
+- `CLAUDE_MODEL`
+- `DISCORD_WEBHOOK_URL` (for completion notifications)
+
 The script supports:
 
 - `up` / `down` / `status`
-- `task <agent> "prompt"`
+- `task [--notify <bot_id>] <agent> "prompt"`
+- `watch <bot_id> <agent>` (attach completion watcher to running task)
 - `send <agent> <raw shell command>`
 - `tail <agent> [lines]`
 - `doctor`
@@ -55,9 +62,11 @@ The script supports:
    - Claude Opus for plan, then Sonnet for coding/review
    - Gemini for summary + second review
 4. Use `scripts/agent-stack tail <agent>` to inspect progress
-5. Report milestones to user (started, in-progress, blocked, finished, ETA)
-6. Do not "dead-wait" long CLI jobs: actively tail/checkpoint and send periodic progress updates
-7. Run `scripts/agent-stack down` after completion (or keep session if user wants continuity)
+5. Dispatch long tasks with notifier enabled, e.g. `scripts/agent-stack task --notify <dispatcher_bot_id> claude "..."`
+6. Report milestones to user (started, in-progress, blocked, finished, ETA)
+7. Do not "dead-wait" long CLI jobs: actively tail/checkpoint and send periodic progress updates
+8. Avoid fixed short timeouts for long tasks; prefer tmux/background + watcher
+9. Run `scripts/agent-stack down` after completion (or keep session if user wants continuity)
 
 ## Claude model routing commands
 
