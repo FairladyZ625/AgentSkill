@@ -58,3 +58,23 @@ openclaw message send \
 
 ## 回执格式（统一）
 `ACK + account + 文件名 + messageId + 结果(成功/失败原因)`
+
+
+## 账号速查（本环境常用）
+- `main`
+- `codex`
+- `gpt52`
+- `glm47`
+- `glm5`
+- `sonnet`
+- `opus`
+- `haiku`
+- `gemini31pro`
+- `gemini3flash`
+
+以 `openclaw channels list` 实际输出为准。
+
+## 回执质量检查
+- `messageId` 应为 Discord 雪花 ID（通常 18-20 位数字）
+- 建议带 `--json` 并从返回中复制 `messageId`
+- 若 messageId 明显异常（位数不对），以 CLI JSON 回包为准重新校对

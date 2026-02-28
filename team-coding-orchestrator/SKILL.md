@@ -150,3 +150,39 @@ Example short preflight prompt:
 `Check read access to <input paths>, write access to <output dir>, and git status in repo. Return only PASS/FAIL + reason.`
 
 If preflight fails, do not start long run. First fix context/path/permission issues.
+
+
+## Session continuity & multi-turn checkpointing
+
+All three CLIs (codex/claude/gemini) support multi-turn continuation **within the same tmux pane**.
+
+Continuity keeps working unless one of these happens:
+- `scripts/agent-stack down`
+- pane/session killed
+- host restart/crash
+
+Best practice for reliable "断点续传":
+1. keep pane alive
+2. write checkpoints to files (`02-WORKING/shared/*.txt`)
+3. commit meaningful milestones
+
+Do not rely on model memory alone for long runs.
+
+## Gemini stability guardrails (required)
+
+Gemini has higher risk of pane drift when multiple tasks overlap.
+Use these guardrails:
+
+1. **single-flight**: never overlap two gemini tasks in one pane.
+2. pre-dispatch check: ensure gemini pane is idle (`bash`) before sending new task.
+3. always dispatch with short command + context brief file.
+4. if watcher/no-marker noise appears, run `scripts/agent-stack down && scripts/agent-stack up` before retry.
+
+## Watcher hygiene
+
+If you see delayed timeout messages from old runs, assume stale watcher first.
+Use current script behavior where `agent-stack down` cleans watcher processes.
+If needed, manually clean:
+```bash
+pkill -f "team-coding-orchestrator/scripts/agent-stack-watcher" || true
+```
