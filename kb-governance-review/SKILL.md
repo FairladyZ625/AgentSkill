@@ -27,7 +27,7 @@ Run full governance checks across `00-09`:
 ## Output contract
 
 Write findings into a report file under:
-- `/Users/lizeyu/Documents/ZeYu-AI-Brain/07-REVIEWS/KNOWLEDGEBASE/`
+- `/Users/lizeyu/Documents/ZeYu-AI-Brain/10-REVIEWS/KNOWLEDGEBASE/`
 
 Use filename:
 - `review-YYYY-MM-DD-HHMM.md`
@@ -35,7 +35,7 @@ Use filename:
 Use template:
 - `templates/review-report-template.md`
 
-If file write is blocked by permissions, post full Markdown report in channel and @Codex Main to persist it into `07-REVIEWS/KNOWLEDGEBASE/`.
+If file write is blocked by permissions, post full Markdown report in channel and @Codex Main to persist it into `10-REVIEWS/KNOWLEDGEBASE/`.
 
 ## Response contract (channel)
 
