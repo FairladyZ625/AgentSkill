@@ -1,0 +1,4 @@
+interface:
+  display_name: "macOS System Triage"
+  short_description: "Diagnose Mac slowdowns and runaway daemons"
+  default_prompt: "Use $macos-system-triage to diagnose why my Mac is slow and identify safe next actions."
