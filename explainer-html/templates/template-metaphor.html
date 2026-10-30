@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[主题标题] · 解释报告</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#faf7f0; --bg2:#f0ebe0; --card:#ffffff; --ink:#3d3833; --mute:#7a7266; --line:#d8d0c4;
+  --ok:#4a7c59; --warn:#b0713c; --bad:#a05252; --blue:#4a6b8a;
+  --ok-bg:#e8f0e9; --warn-bg:#f6ece2; --bad-bg:#f4e6e6; --blue-bg:#e6edf3;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font:16px/1.68 -apple-system,"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC",system-ui,sans-serif;
+}
+main{
+  max-width:none;
+  width:100%;
+  padding:24px clamp(16px,2vw,32px) 80px;
+}
+header{border-bottom:2px solid var(--line);padding-bottom:20px;margin-bottom:22px}
+.act{font:700 12px/1.2 system-ui,sans-serif;letter-spacing:.1em;color:var(--warn);text-transform:uppercase}
+h1{font:700 clamp(26px,3.2vw,42px)/1.22 Georgia,"Songti SC",serif;margin:8px 0 10px}
+h2{font:700 clamp(20px,2vw,26px)/1.3 Georgia,"Songti SC",serif;margin:4px 0 10px}
+h3{font-size:17px;margin:12px 0 6px}
+p{margin:8px 0}
+.lede{font-size:18px;line-height:1.6;color:#4e473f}
+.mute{color:var(--mute);font-size:14px}
+.badges{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+.badge{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.badge b{font:700 24px/1.15 Georgia,serif;display:block;margin-bottom:4px}
+.badge.ok b{color:var(--ok)} .badge.warn b{color:var(--warn)} .badge.bad b{color:var(--bad)} .badge.blue b{color:var(--blue)}
+.metaphor-box{background:var(--bg2);border-left:5px solid var(--blue);padding:14px 18px;border-radius:8px;margin:14px 0}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:22px 0}
+.grid{display:grid;gap:16px}
+@media(min-width:1100px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1400px){.g4{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:860px){.badges{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.card{border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:#fffdf9}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px;margin-right:6px}
+.t-ok{background:var(--ok-bg);color:var(--ok)} .t-warn{background:var(--warn-bg);color:var(--warn)}
+.t-bad{background:var(--bad-bg);color:var(--bad)} .t-blue{background:var(--blue-bg);color:var(--blue)}
+.tablewrap{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+th{background:var(--bg2);font-weight:600;color:var(--blue);white-space:nowrap}
+code{font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--bg2);padding:1px 5px;border-radius:4px}
+svg{display:block;width:100%;height:auto;background:#f7f3ea;border:1px solid var(--line);border-radius:10px;margin:14px 0}
+details{margin-top:14px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+summary{cursor:pointer;font-weight:600;color:var(--blue)}
+</style>
+</head>
+<body>
+<main>
+
+<!-- 必填骨架声明：
+比喻世界：[填写从机制本身生发出的统一比喻世界，禁止默认使用餐馆/后厨]
+为何贴切：[回答谁在动、在哪动、靠什么流转、错了长什么样]
+-->
+
+<header>
+  <div class="act">[归属任务/阶段] · [日期]</div>
+  <h1>[第一句话直接给结论：做成了什么 / 发现了什么 / 需要定什么]</h1>
+
+  <div class="badges">
+    <div class="badge ok"><b>100%</b>[核心指标 1]</div>
+    <div class="badge blue"><b>12 ms</b>[实测指标 2]</div>
+    <div class="badge warn"><b>1 项</b>[待决事项]</div>
+    <div class="badge ok"><b>PR #0000</b>[关键交付锚点]</div>
+  </div>
+</header>
+
+<!-- ==================== 第一幕：前后对比 SVG 模板（强视觉层级自解释，不加冗余教学段落） ==================== -->
+<section>
+  <div class="act">第一幕 · 问题本质与前后对比</div>
+  <h2>[本幕核心结论：统一比喻词首次出现时紧跟括号标注真实技术名词]</h2>
+
+  <!--
+    ⚠️ SVG 铁律：
+    1. 严禁在 <svg> 内写 <code> <strong> <b> <span> <br> <div> <p> 等 HTML 标签（会触发 HTML5 解析器强行闭合 <svg>）！
+       等宽字体一律写 font-family="ui-monospace,SFMono-Regular,Menlo,monospace"，加粗一律写 font-weight="700"。
+    2. 每个 <text> 的像素宽度（中文字符数 × font-size × 1.04 + 英文字符数 × font-size × 0.58）必须小于所在 <rect> 的 width - 24！
+  -->
+  <svg viewBox="0 0 1600 320" role="img" aria-label="修改前后机制对比图">
+    <!-- 左半区：旧机制/故障态 -->
+    <rect x="20" y="20" width="760" height="280" rx="12" fill="#f4e6e6" stroke="#a05252" stroke-width="2"/>
+    <text x="45" y="56" fill="#a05252" font-size="20" font-weight="700">❌ 修改前：[旧机制一句话故障现象]</text>
+    <text x="45" y="82" fill="#7a7266" font-size="14">[生活比喻解释为什么旧机制会出错]</text>
+
+    <rect x="45" y="110" width="320" height="150" rx="8" fill="#ffffff" stroke="#a05252" stroke-width="2"/>
+    <text x="65" y="142" fill="#3d3833" font-size="16" font-weight="700">步骤 A：[主体名称]</text>
+    <text x="65" y="172" fill="#3d3833" font-size="13.5">[动作描述第一行，控制在 20 字内]</text>
+    <text x="65" y="198" fill="#7a7266" font-size="13" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">source-file.ts:120</text>
+
+    <path d="M365 185 H425" stroke="#a05252" stroke-width="3"/>
+    <polygon points="425,185 413,178 413,192" fill="#a05252"/>
+
+    <rect x="425" y="110" width="330" height="150" rx="8" fill="#ffffff" stroke="#a05252" stroke-width="2"/>
+    <text x="445" y="142" fill="#a05252" font-size="16" font-weight="700">步骤 B：[故障结果]</text>
+    <text x="445" y="172" fill="#3d3833" font-size="13.5">[故障现象描述第一行，控制在 20 字内]</text>
+    <text x="445" y="198" fill="#a05252" font-size="13" font-weight="600">[实测错误码或观测结果]</text>
+
+    <!-- 右半区：新机制/收敛态 -->
+    <rect x="820" y="20" width="760" height="280" rx="12" fill="#e8f0e9" stroke="#4a7c59" stroke-width="2"/>
+    <text x="845" y="56" fill="#365d42" font-size="20" font-weight="700">✅ 修改后：[新机制一句话收敛效果]</text>
+    <text x="845" y="82" fill="#4a7c59" font-size="14">[生活比喻解释为什么新机制从根上消除了故障]</text>
+
+    <rect x="845" y="110" width="320" height="150" rx="8" fill="#ffffff" stroke="#4a7c59" stroke-width="2"/>
+    <text x="865" y="142" fill="#365d42" font-size="16" font-weight="700">步骤 A：[新入口/单点端口]</text>
+    <text x="865" y="172" fill="#3d3833" font-size="13.5">[新动作描述第一行，控制在 20 字内]</text>
+    <text x="865" y="198" fill="#7a7266" font-size="13" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">new-port.ts:45</text>
+
+    <path d="M1165 185 H1225" stroke="#4a7c59" stroke-width="3"/>
+    <polygon points="1225,185 1213,178 1213,192" fill="#4a7c59"/>
+
+    <rect x="1225" y="110" width="330" height="150" rx="8" fill="#ffffff" stroke="#4a7c59" stroke-width="2"/>
+    <text x="1245" y="142" fill="#365d42" font-size="16" font-weight="700">步骤 B：[确定性收敛结果]</text>
+    <text x="1245" y="172" fill="#3d3833" font-size="13.5">[验证结果描述第一行，控制在 20 字内]</text>
+    <text x="1245" y="198" fill="#4a7c59" font-size="13" font-weight="600">[实测通过数据]</text>
+  </svg>
+</section>
+
+<!-- ==================== 第二幕：硬骨架任务/功能对照表（严禁比喻词） ==================== -->
+<section>
+  <div class="act">第二幕 · 直白工程交付对照表（硬骨架，不用比喻）</div>
+  <h2>具体做了什么、删了什么、怎么验证的</h2>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>任务 / 模块（人话）</th>
+          <th>具体技术改动（直述，不用比喻）</th>
+          <th>验证环境与实测证据</th>
+          <th>状态</th>
+          <th>代码 / 台账锚点</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>[任务或切片名称]</strong></td>
+          <td>[说明改了哪个文件、删了哪条旧路径、新增了什么行为]</td>
+          <td>[说明在什么环境跑了什么测试、通过数是多少]</td>
+          <td><span class="tag t-ok">done</span></td>
+          <td><code>task_xxxx</code> / PR #0000</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <details>
+    <summary>📖 比喻 ↔ 技术术语对照表（点击展开）</summary>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>文中比喻词</th>
+            <th>对应真实技术概念</th>
+            <th>源码位置或命令</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>[比喻词 A]</td>
+            <td>[技术名词 A]</td>
+            <td><code>packages/...</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+</section>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[架构/技术主题] · Technical Explainer</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#faf7f0; --bg2:#f0ebe0; --card:#ffffff; --ink:#3d3833; --mute:#7a7266; --line:#d8d0c4;
+  --ok:#4a7c59; --warn:#b0713c; --bad:#a05252; --blue:#4a6b8a;
+  --ok-bg:#e8f0e9; --warn-bg:#f6ece2; --bad-bg:#f4e6e6; --blue-bg:#e6edf3;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font:15.5px/1.65 -apple-system,"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC",system-ui,sans-serif;
+}
+main{max-width:none;width:100%;padding:24px clamp(16px,2vw,32px) 80px}
+header{border-bottom:2px solid var(--line);padding-bottom:20px;margin-bottom:22px}
+.act{font:700 12px/1.2 system-ui,sans-serif;letter-spacing:.1em;color:var(--blue);text-transform:uppercase}
+h1{font:700 clamp(26px,3vw,40px)/1.22 Georgia,"Songti SC",serif;margin:8px 0 10px}
+h2{font:700 clamp(19px,1.8vw,25px)/1.3 Georgia,"Songti SC",serif;margin:4px 0 10px}
+h3{font-size:17px;margin:12px 0 6px}
+p{margin:8px 0}
+.lede{font-size:17.5px;line-height:1.6;color:#4e473f}
+.mute{color:var(--mute);font-size:13.5px}
+.badges{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+.badge{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.badge b{font:700 22px/1.15 Georgia,serif;display:block;margin-bottom:4px}
+.badge.ok b{color:var(--ok)} .badge.warn b{color:var(--warn)} .badge.bad b{color:var(--bad)} .badge.blue b{color:var(--blue)}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:22px 0}
+.columns{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(340px,1fr);gap:22px;align-items:start}
+@media(max-width:1024px){.columns{grid-template-columns:1fr}.badges{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px;margin-right:6px}
+.t-ok{background:var(--ok-bg);color:var(--ok)} .t-warn{background:var(--warn-bg);color:var(--warn)}
+.t-bad{background:var(--bad-bg);color:var(--bad)} .t-blue{background:var(--blue-bg);color:var(--blue)}
+.tablewrap{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+th{background:var(--bg2);font-weight:600;color:var(--blue);white-space:nowrap}
+code{font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--bg2);padding:1px 5px;border-radius:4px}
+pre{background:#2e2a25;color:#f5f0e6;padding:14px 16px;border-radius:10px;overflow-x:auto;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;margin:10px 0}
+pre code{background:none;padding:0;color:inherit}
+svg{display:block;width:100%;height:auto;background:#f7f3ea;border:1px solid var(--line);border-radius:10px;margin:12px 0}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-top:6px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px}
+</style>
+</head>
+<body>
+<main>
+
+<!-- 必填骨架声明：
+模式：TECHNICAL（纯技术直述 + 多维架构 SVG，不使用生活比喻）
+主题范围：[一句话写清涉及的包、端口、协议或数据流]
+-->
+
+<header>
+  <div class="act">TECHNICAL ARCHITECTURE EXPLAINER · [日期]</div>
+  <h1>[第一句话给出架构结论与核心设计边界]</h1>
+  <p class="lede">[说明本次架构设计解决的技术不变量、单点实现位置以及删除的旧路径。]</p>
+
+  <div class="badges">
+    <div class="badge ok"><b>已有基础</b>[已有模块计数与说明]</div>
+    <div class="badge warn"><b>待建切片</b>[新增/改造模块计数]</div>
+    <div class="badge blue"><b>核心端口</b>[唯一入口或契约名]</div>
+    <div class="badge bad"><b>删除旧路</b>[被替代并清理的路径]</div>
+  </div>
+</header>
+
+<!-- ==================== 第一节：四步数据流 / 分层架构图 ==================== -->
+<section>
+  <div class="act">SECTION 01 · DATA FLOW &amp; LAYER BOUNDARIES</div>
+  <h2>分层架构与调用链数据流</h2>
+
+  <!--
+    ⚠️ SVG 铁律：
+    1. 严禁在 <svg> 内使用 <code> <strong> <b> <span> <br> <div> 等 HTML 标签（会触发 HTML5 解析器强行跳出 <svg>）！
+    2. 颜色约定：已有模块 fill="#e8f0e9" stroke="#4a7c59"；待建模块 fill="#f6ece2" stroke="#b0713c"；核心接口 fill="#e6edf3" stroke="#4a6b8a"；待删路径 fill="#f4e6e6" stroke="#a05252"。
+  -->
+  <svg viewBox="0 0 1600 280" role="img" aria-label="四阶段技术数据流图">
+    <!-- 节点 1：核心接口 (#4a6b8a) -->
+    <rect x="30" y="40" width="330" height="190" rx="10" fill="#e6edf3" stroke="#4a6b8a" stroke-width="2"/>
+    <text x="50" y="75" fill="#4a6b8a" font-size="16" font-weight="700">1. Ingress / CLI Adapter</text>
+    <text x="50" y="105" fill="#3d3833" font-size="13" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">packages/cli/src/...</text>
+    <text x="50" y="135" fill="#3d3833" font-size="13.5">• 解析参数并构造命令契约</text>
+    <text x="50" y="162" fill="#7a7266" font-size="13">• 零业务判定（Adapter 层）</text>
+
+    <path d="M360 135 H420" stroke="#4a6b8a" stroke-width="3"/>
+    <polygon points="420,135 408,128 408,142" fill="#4a6b8a"/>
+
+    <!-- 节点 2：待建/改造模块 (#b0713c) -->
+    <rect x="420" y="40" width="350" height="190" rx="10" fill="#f6ece2" stroke="#b0713c" stroke-width="2"/>
+    <text x="440" y="75" fill="#8a542c" font-size="16" font-weight="700">2. Application Port [待建]</text>
+    <text x="440" y="105" fill="#3d3833" font-size="13" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">packages/daemon/src/...</text>
+    <text x="440" y="135" fill="#3d3833" font-size="13.5">• 协调副作用与一致性水位</text>
+    <text x="440" y="162" fill="#8a542c" font-size="13" font-weight="600">• 唯一横切实现位置</text>
+
+    <path d="M770 135 H830" stroke="#4a7c59" stroke-width="3"/>
+    <polygon points="830,135 818,128 818,142" fill="#4a7c59"/>
+
+    <!-- 节点 3：已有领域核心 (#4a7c59) -->
+    <rect x="830" y="40" width="350" height="190" rx="10" fill="#e8f0e9" stroke="#4a7c59" stroke-width="2"/>
+    <text x="850" y="75" fill="#365d42" font-size="16" font-weight="700">3. Pure Domain [已有]</text>
+    <text x="850" y="105" fill="#3d3833" font-size="13" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">packages/kernel/src/domain/...</text>
+    <text x="850" y="135" fill="#3d3833" font-size="13.5">• 纯函数领域判定与状态转换</text>
+    <text x="850" y="162" fill="#365d42" font-size="13">• 零 I/O 依赖，可直接单测</text>
+
+    <path d="M1180 135 H1240" stroke="#4a7c59" stroke-width="3"/>
+    <polygon points="1240,135 1228,128 1228,142" fill="#4a7c59"/>
+
+    <!-- 节点 4：读投影层 (#4a7c59) -->
+    <rect x="1240" y="40" width="330" height="190" rx="10" fill="#e8f0e9" stroke="#4a7c59" stroke-width="2"/>
+    <text x="1260" y="75" fill="#365d42" font-size="16" font-weight="700">4. SQLite Read Projection</text>
+    <text x="1260" y="105" fill="#3d3833" font-size="13" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">packages/kernel/src/projection/</text>
+    <text x="1260" y="135" fill="#3d3833" font-size="13.5">• 物化视图与图谱边查询</text>
+    <text x="1260" y="162" fill="#365d42" font-size="13">• 同水位（Same-Cut）强一致读取</text>
+  </svg>
+
+  <div class="legend">
+    <span><i style="background:#e8f0e9;border:1px solid #4a7c59"></i> 已有模块 (#4a7c59)</span>
+    <span><i style="background:#f6ece2;border:1px solid #b0713c"></i> 待建/改造 (#b0713c)</span>
+    <span><i style="background:#e6edf3;border:1px solid #4a6b8a"></i> 核心接口/契约 (#4a6b8a)</span>
+    <span><i style="background:#f4e6e6;border:1px solid #a05252"></i> 待删旧路径 (#a05252)</span>
+  </div>
+</section>
+
+<!-- ==================== 第二节：契约定义与实现对照 ==================== -->
+<section>
+  <div class="act">SECTION 02 · INTERFACE CONTRACT &amp; IMPLEMENTATION MATRIX</div>
+  <h2>核心类型契约与切片交付矩阵</h2>
+
+  <div class="columns">
+    <div class="tablewrap" style="margin-top:0">
+      <table>
+        <thead>
+          <tr>
+            <th>状态</th>
+            <th>模块路径</th>
+            <th>职责边界与变更说明</th>
+            <th>验证层级</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="tag t-ok">✅ 已有</span></td>
+            <td><code>packages/kernel/src/...</code></td>
+            <td>提供基础投影查询接口，无需改动 schema。</td>
+            <td>fast / contract</td>
+          </tr>
+          <tr>
+            <td><span class="tag t-warn">🔲 待建</span></td>
+            <td><code>packages/daemon/src/...</code></td>
+            <td>实现新查询装配器并接入只读路由表。</td>
+            <td>integration</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <pre><code>export interface TraceFileInput {
+  readonly path: string;
+  readonly limit?: number;
+}
+
+export interface TraceFileResult {
+  readonly path: string;
+  readonly tasks: readonly string[];
+  readonly decisions: readonly string[];
+  readonly facts: readonly string[];
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+</main>
+</body>
+</html>
