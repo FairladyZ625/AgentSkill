@@ -135,6 +135,8 @@ lark-cli base +record-batch-update --base-token $B --table-id "④ 任务" --jso
 lark-cli contact +search-user --queries "吴圣洁"
 ```
 
+`base +form-submit` 的日期必须用 `yyyy-MM-dd HH:mm:ss`（包含秒）；它与普通 record 写入接受的日期格式不同。
+
 ### 回读与边界
 
 写完回读记录及关联；先查任务编号唯一，再创建进展。关联失败时先修编号/层级，不另建一套表。看板计数来自实际记录，0 条进展就显示 0，不填示例冒充成员进度。
